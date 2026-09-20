@@ -20,7 +20,8 @@ It turns each completed job into:
 - Launch checklist tracker
 - Payment-link setup panel
 - Backup/import/export for local MVP data
-- PWA manifest and icon
+- Fulfillment kit for paid beta customers
+- PWA manifest, icon, and service worker
 
 The MVP is intentionally built to validate demand fast. It runs fully in the browser with localStorage persistence, so it can be shown to prospects immediately without backend costs.
 
@@ -61,7 +62,7 @@ When validation works, wire the MVP to:
 - PostHog for analytics
 - Vercel for hosting
 
-A production Supabase schema is included at `src/production-schema.sql`. Production API examples are included in `api-examples/`. Sales execution is documented in `SALES_PLAYBOOK.md`.
+A production Supabase schema is included at `src/production-schema.sql`. Production API examples are included in `api-examples/`. Sales execution is documented in `SALES_PLAYBOOK.md`. Paid setup delivery is documented in `FULFILLMENT_SOP.md`. Review safety rules are documented in `REVIEW_COMPLIANCE.md`.
 
 ## Compliance note
 

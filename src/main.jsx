@@ -302,6 +302,7 @@ function App() {
       <FreeTools business={state.business} />
       <Pricing settings={state.settings} />
       <MonetizationSetup state={state} setState={setState} />
+      <FulfillmentKit state={state} />
       <AcquisitionKit business={state.business} />
       <ProspectCRM state={state} setState={setState} />
       <CampaignCenter state={state} />
@@ -325,6 +326,7 @@ function Nav() {
         <a href="#tools">Free Tools</a>
         <a href="#pricing">Pricing</a>
         <a href="#settings">Payments</a>
+        <a href="#fulfillment">Fulfillment</a>
         <a href="#growth">Growth Kit</a>
         <a href="#prospects">Prospects</a>
         <a href="#portfolio">Portfolio</a>
@@ -1103,6 +1105,68 @@ function MonetizationSetup({ state, setState }) {
   );
 }
 
+
+function FulfillmentKit({ state }) {
+  const [copied, setCopied] = useState('');
+  const jobs = (state.jobs || []).slice(0, 5);
+  const business = state.business;
+  const settings = state.settings || {};
+  const intakeEmail = `Subject: What I need for your first 5 JobProof pages\n\nHi [Name],\n\nThanks for getting started with JobProof. To build your first 5 job proof pages, please send:\n\n1. 2-5 photos per job\n2. Service type for each job\n3. City or neighborhood\n4. One sentence about what was done\n5. Your Google review link\n6. Best phone number and website for quote requests\n\nYou will receive:\n\n- 5 proof page links\n- QR codes for sharing\n- Google review request messages\n- Google Business Profile posts\n- Facebook/Instagram captions\n- A simple portfolio page\n\nTurnaround: 24-48 hours.\n\nPayment link: ${settings.betaPaymentLink || '[your $49 Stripe payment link]'}\n\nThanks,\n[Your Name]`;
+
+  const deliveryEmail = `Subject: Your first JobProof pages are ready\n\nHi [Name],\n\nYour JobProof setup is ready. Here are the first proof pages:\n\n${jobs.map((job, index) => `${index + 1}. ${job.assets?.projectHeading || job.serviceType}: ${buildPublicUrl(job.id)}`).join('\n')}\n\nPublic portfolio:\n${window.location.origin + window.location.pathname}#portfolio\n\nHow to use these:\n\n1. Send proof page links to future customers who ask for examples.\n2. Use the QR codes on invoices, estimate sheets, or leave-behind cards.\n3. Copy the Google Business Profile posts into your Google profile.\n4. Send the review request message to real customers after completed jobs.\n5. Keep adding every finished job so your proof library grows.\n\nImportant: ask customers for honest reviews only. Do not ask only happy customers, do not ask for 5 stars, and do not offer incentives.\n\nIf you want me to keep this running for you, the ongoing plan is $19/month: ${settings.starterPaymentLink || '[your $19/month Stripe link]'}\n\nThanks,\n[Your Name]`;
+
+  const weeklyReminder = `Subject: Any completed jobs this week?\n\nHi [Name],\n\nQuick reminder: if you completed any jobs this week, send over the photos and one sentence about each job. I’ll turn them into proof pages, Google posts, review request messages, and social captions.\n\nThe best time to ask for an honest review is shortly after the work is complete, while the customer still remembers the experience.\n\nThanks,\n[Your Name]`;
+
+  const invoiceNote = `JobProof Beta Setup — $49\nIncludes 5 completed job proof pages, QR codes, Google review request copy, Google Business Profile posts, social captions, and a public portfolio link.\n\nOngoing plan after beta setup: $19/month for up to 20 job proof pages per month.`;
+
+  async function copy(label, text) {
+    await navigator.clipboard.writeText(text);
+    setCopied(label);
+    setTimeout(() => setCopied(''), 1400);
+  }
+
+  function downloadFulfillmentPacket() {
+    const packet = `JOBPROOF FULFILLMENT PACKET\n\nBusiness: ${business.name}\nService area: ${business.serviceArea}\nPrimary service: ${business.primaryService}\n\nPROOF PAGES\n${jobs.map((job, index) => `${index + 1}. ${job.assets?.projectHeading || job.serviceType}\n${buildPublicUrl(job.id)}\nGoogle post:\n${job.assets?.googlePost}\nReview SMS:\n${job.assets?.reviewSms}\n`).join('\n---\n')}\n\nPORTFOLIO\n${window.location.origin + window.location.pathname}#portfolio\n`;
+    const blob = new Blob([packet], { type: 'text/plain;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `${slugify(business.name)}-fulfillment-packet.txt`;
+    a.click();
+  }
+
+  const blocks = [
+    ['Intake email', intakeEmail, <Mail />],
+    ['Delivery email', deliveryEmail, <BadgeCheck />],
+    ['Weekly reminder', weeklyReminder, <CalendarDays />],
+    ['Invoice note', invoiceNote, <CreditCard />],
+  ];
+
+  return (
+    <section className="section fulfillment" id="fulfillment">
+      <div className="section-heading left">
+        <div className="eyebrow"><Clipboard size={16} /> Fulfillment kit</div>
+        <h2>Deliver paid beta customers without chaos</h2>
+        <p>Use these assets when someone pays the $49 setup fee. The fastest path to revenue is manual fulfillment before full automation.</p>
+      </div>
+      <div className="fulfillment-summary">
+        <div className="summary-card"><strong>{jobs.length}</strong><span>proof pages in current packet</span></div>
+        <div className="summary-card"><strong>24-48h</strong><span>recommended delivery promise</span></div>
+        <div className="summary-card"><strong>$49</strong><span>first setup price</span></div>
+        <button className="button primary" onClick={downloadFulfillmentPacket}>Download fulfillment packet <Download size={17} /></button>
+      </div>
+      <div className="asset-grid launch-assets">
+        {blocks.map(([title, text, icon]) => (
+          <div className="asset-card" key={title}>
+            <h4>{React.cloneElement(icon, { size: 18 })} {title}</h4>
+            <pre>{text}</pre>
+            <button className="copy-button" onClick={() => copy(title, text)}><Clipboard size={15} /> {copied === title ? 'Copied' : 'Copy'}</button>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function AcquisitionKit({ business }) {
   const sampleMessage = `Hey [Name] — I saw your recent [service] photos. I’m testing JobProof, a simple tool that turns completed jobs into a mini project page, Google review request, QR code, and ready-to-post Google/Facebook caption.\n\nI made a quick example for your business. If useful, I can set up 5 of these for your recent jobs for $49 while I validate the product. Want me to send the sample?`;
 
@@ -1317,3 +1381,9 @@ function Footer() {
 }
 
 createRoot(document.getElementById('root')).render(<App />);
+
+if ('serviceWorker' in navigator && import.meta.env.PROD) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  });
+}
