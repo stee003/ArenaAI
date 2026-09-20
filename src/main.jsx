@@ -51,6 +51,10 @@ const demoState = {
     offer: 'Free driveway and patio estimate',
   },
   leads: [],
+  prospects: [
+    { id: 'prospect-1', businessName: 'Sparkle Path Power Wash', niche: 'Pressure washing', city: 'Frisco, TX', reviewCount: 18, hasPhotos: true, hasProjectPages: false, ownerOperated: true, jobValue: 250, status: 'sample_needed', contact: 'Facebook', notes: 'Good before/after photos, weak captions, no project pages.' },
+    { id: 'prospect-2', businessName: 'North Dallas Lawn Crew', niche: 'Landscaping', city: 'Plano, TX', reviewCount: 42, hasPhotos: true, hasProjectPages: false, ownerOperated: true, jobValue: 180, status: 'not_contacted', contact: 'Website form', notes: 'Posts often but not optimized for Google Business Profile.' },
+  ],
   jobs: [
     {
       id: 'demo-job-1',
@@ -130,6 +134,7 @@ function loadState() {
       business: { ...demoState.business, ...(parsed.business || {}) },
       jobs: Array.isArray(parsed.jobs) && parsed.jobs.length ? parsed.jobs : demoState.jobs,
       leads: Array.isArray(parsed.leads) ? parsed.leads : [],
+      prospects: Array.isArray(parsed.prospects) ? parsed.prospects : demoState.prospects,
     };
   } catch {
     return demoState;
@@ -219,6 +224,7 @@ function App() {
       <Dashboard state={state} setState={setState} />
       <Pricing />
       <AcquisitionKit business={state.business} />
+      <ProspectCRM state={state} setState={setState} />
       <CampaignCenter state={state} />
       <Roadmap />
       <Footer />
@@ -238,6 +244,7 @@ function Nav() {
         <a href="#dashboard">Dashboard</a>
         <a href="#pricing">Pricing</a>
         <a href="#growth">Growth Kit</a>
+        <a href="#prospects">Prospects</a>
         <a href="#portfolio">Portfolio</a>
       </nav>
       <a className="nav-cta" href="#builder">Create free proof</a>
@@ -578,6 +585,114 @@ function downloadLeadsCsv(state) {
   a.href = URL.createObjectURL(blob);
   a.download = `${slugify(state.business.name)}-jobproof-leads.csv`;
   a.click();
+}
+
+
+function scoreProspect(prospect) {
+  let score = 0;
+  if ((Number(prospect.reviewCount) || 0) < 50) score += 2;
+  if (prospect.hasPhotos) score += 2;
+  if (!prospect.hasProjectPages) score += 2;
+  if (prospect.ownerOperated) score += 1;
+  if ((Number(prospect.jobValue) || 0) >= 150) score += 1;
+  if (safe(prospect.contact)) score += 1;
+  if (safe(prospect.notes).toLowerCase().includes('competitor')) score += 1;
+  return Math.min(score, 10);
+}
+
+function ProspectCRM({ state, setState }) {
+  const [prospect, setProspect] = useState({ businessName: '', niche: state.business.primaryService || '', city: state.business.serviceArea || '', reviewCount: '', hasPhotos: true, hasProjectPages: false, ownerOperated: true, jobValue: '', status: 'not_contacted', contact: '', notes: '' });
+  const [copied, setCopied] = useState('');
+  const prospects = state.prospects || [];
+  const sorted = [...prospects].sort((a, b) => scoreProspect(b) - scoreProspect(a));
+
+  function addProspect(event) {
+    event.preventDefault();
+    if (!safe(prospect.businessName)) return;
+    const item = { ...prospect, id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()), reviewCount: Number(prospect.reviewCount) || 0, jobValue: Number(prospect.jobValue) || 0 };
+    setState((prev) => ({ ...prev, prospects: [item, ...(prev.prospects || [])] }));
+    setProspect({ businessName: '', niche: state.business.primaryService || '', city: state.business.serviceArea || '', reviewCount: '', hasPhotos: true, hasProjectPages: false, ownerOperated: true, jobValue: '', status: 'not_contacted', contact: '', notes: '' });
+  }
+
+  function updateStatus(id, status) {
+    setState((prev) => ({ ...prev, prospects: (prev.prospects || []).map((item) => item.id === id ? { ...item, status } : item) }));
+  }
+
+  function deleteProspect(id) {
+    setState((prev) => ({ ...prev, prospects: (prev.prospects || []).filter((item) => item.id !== id) }));
+  }
+
+  async function copyScript(item) {
+    const script = `Hey ${item.ownerName || '[Name]'} — I found ${item.businessName} while looking at ${safe(item.niche, 'local service')} businesses in ${safe(item.city, 'your area')}. Your job photos are exactly the kind of proof customers want before they call.\n\nI built JobProof to turn completed jobs into a proof page, Google review request, QR code, Google Business Profile post, and social caption.\n\nI can make a free sample from one recent job. If you like it, I’ll set up 5 job pages for $49. Want me to make the sample?`;
+    await navigator.clipboard.writeText(script);
+    setCopied(item.id);
+    setTimeout(() => setCopied(''), 1300);
+  }
+
+  function downloadProspectsCsv() {
+    const rows = [['business_name','niche','city','review_count','score','status','contact','job_value','notes'], ...prospects.map((item) => [item.businessName, item.niche, item.city, item.reviewCount, scoreProspect(item), item.status, item.contact, item.jobValue, item.notes])];
+    const csv = rows.map((row) => row.map((cell) => `"${String(cell ?? '').replaceAll('"', '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'jobproof-prospects.csv';
+    a.click();
+  }
+
+  return (
+    <section className="section prospects" id="prospects">
+      <div className="section-heading left">
+        <div className="eyebrow"><Target size={16} /> Sales pipeline</div>
+        <h2>Prospect CRM for getting the first customers</h2>
+        <p>Add local businesses, score who is most likely to buy, copy a personalized outreach script, and track each prospect from not contacted to paid.</p>
+      </div>
+      <div className="prospect-layout">
+        <form className="panel prospect-form" onSubmit={addProspect}>
+          <h3><Search size={20} /> Add prospect</h3>
+          <div className="form-grid two">
+            <Field label="Business name" value={prospect.businessName} onChange={(v) => setProspect({ ...prospect, businessName: v })} />
+            <Field label="Niche" value={prospect.niche} onChange={(v) => setProspect({ ...prospect, niche: v })} />
+            <Field label="City" value={prospect.city} onChange={(v) => setProspect({ ...prospect, city: v })} />
+            <Field label="Review count" value={prospect.reviewCount} onChange={(v) => setProspect({ ...prospect, reviewCount: v })} />
+            <Field label="Contact method" value={prospect.contact} onChange={(v) => setProspect({ ...prospect, contact: v })} />
+            <Field label="Typical job value" value={prospect.jobValue} onChange={(v) => setProspect({ ...prospect, jobValue: v })} />
+          </div>
+          <div className="toggle-row">
+            <label><input type="checkbox" checked={prospect.hasPhotos} onChange={(e) => setProspect({ ...prospect, hasPhotos: e.target.checked })} /> Has job photos</label>
+            <label><input type="checkbox" checked={prospect.hasProjectPages} onChange={(e) => setProspect({ ...prospect, hasProjectPages: e.target.checked })} /> Has project pages</label>
+            <label><input type="checkbox" checked={prospect.ownerOperated} onChange={(e) => setProspect({ ...prospect, ownerOperated: e.target.checked })} /> Owner-operated</label>
+          </div>
+          <label className="field"><span>Notes</span><textarea rows="3" value={prospect.notes} onChange={(e) => setProspect({ ...prospect, notes: e.target.value })} placeholder="What is weak? Reviews, captions, portfolio, GBP posts?" /></label>
+          <button className="button primary full" type="submit">Add prospect</button>
+        </form>
+        <div className="panel prospect-board">
+          <div className="board-top"><h3><Users size={20} /> Ranked prospects</h3><button className="button small ghost" onClick={downloadProspectsCsv}>Export CSV <Download size={15} /></button></div>
+          <div className="prospect-list">
+            {sorted.map((item) => (
+              <article className="prospect-card" key={item.id}>
+                <div className="score-badge">{scoreProspect(item)}/10</div>
+                <div>
+                  <h4>{item.businessName}</h4>
+                  <p>{item.niche} · {item.city} · {item.reviewCount} reviews · ${item.jobValue || 0}+ job value</p>
+                  {item.notes && <small>{item.notes}</small>}
+                </div>
+                <select value={item.status} onChange={(e) => updateStatus(item.id, e.target.value)}>
+                  <option value="not_contacted">Not contacted</option>
+                  <option value="sample_needed">Sample needed</option>
+                  <option value="sample_sent">Sample sent</option>
+                  <option value="follow_up">Follow up</option>
+                  <option value="paid">Paid</option>
+                  <option value="lost">Lost</option>
+                </select>
+                <button className="button small secondary" onClick={() => copyScript(item)}><Clipboard size={15} /> {copied === item.id ? 'Copied' : 'Script'}</button>
+                <button className="button small ghost" onClick={() => deleteProspect(item.id)}><Trash2 size={15} /></button>
+              </article>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
 }
 
 function CampaignCenter({ state }) {
