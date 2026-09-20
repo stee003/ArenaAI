@@ -249,3 +249,21 @@ button { cursor: pointer; }
   .prospect-card { grid-template-columns: 1fr; }
   .score-badge { width: auto; height: auto; padding: .55rem .75rem; justify-self: start; }
 }
+
+.tools-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+.tool-card { min-height: 360px; padding: 1.15rem; border: 1px solid var(--line); border-radius: var(--radius); background: #fff; box-shadow: 0 18px 50px rgba(16,32,51,.08); }
+.tool-card h3 { display: flex; align-items: center; gap: .5rem; margin: 0 0 1rem; }
+.tool-qr, .empty-qr { width: 160px; height: 160px; display: grid; place-items: center; margin: .6rem 0; border: 1px solid var(--line); border-radius: 1rem; background: #f6f9fd; color: var(--muted); font-weight: 900; }
+.mini-actions { display: flex; gap: .5rem; flex-wrap: wrap; margin-top: .7rem; }
+.tool-output { white-space: pre-wrap; word-break: break-word; margin: .8rem 0; padding: .85rem; border-radius: .9rem; background: #f6f9fd; color: #344760; font-family: inherit; font-size: .9rem; line-height: 1.45; }
+.roi-result { display: grid; gap: .2rem; margin-top: 1rem; padding: 1rem; border-radius: 1rem; background: linear-gradient(135deg, #ecfdf5, #eff6ff); border: 1px solid #c9eadf; }
+.roi-result strong { font-size: 2.35rem; line-height: 1; letter-spacing: -.07em; color: #047857; }
+.roi-result span { font-weight: 900; color: #254363; }
+.roi-result small { color: var(--muted); font-weight: 750; }
+
+@media (max-width: 1180px) {
+  .tools-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 640px) {
+  .tools-grid { grid-template-columns: 1fr; }
+}

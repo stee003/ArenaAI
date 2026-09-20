@@ -32,6 +32,10 @@ import {
   Database,
   Target,
   Users,
+  Calculator,
+  MessageSquareText,
+  Link as LinkIcon,
+  Printer,
 } from 'lucide-react';
 import './styles.css';
 
@@ -222,6 +226,7 @@ function App() {
       <ProofStrip />
       <Builder state={state} setState={setState} />
       <Dashboard state={state} setState={setState} />
+      <FreeTools business={state.business} />
       <Pricing />
       <AcquisitionKit business={state.business} />
       <ProspectCRM state={state} setState={setState} />
@@ -242,6 +247,7 @@ function Nav() {
       <nav className="nav-links">
         <a href="#builder">Build MVP</a>
         <a href="#dashboard">Dashboard</a>
+        <a href="#tools">Free Tools</a>
         <a href="#pricing">Pricing</a>
         <a href="#growth">Growth Kit</a>
         <a href="#prospects">Prospects</a>
@@ -457,6 +463,8 @@ function GeneratedAssets({ business, job }) {
         <div className="generated-actions">
           <a className="button secondary" href={publicUrl} target="_blank" rel="noreferrer">Open proof page <ExternalLink size={17} /></a>
           <button className="button ghost" onClick={downloadJson}>Export JSON <Download size={17} /></button>
+          {qrUrl && <button className="button ghost" onClick={() => downloadDataUrl(qrUrl, `${slugify(job.assets.projectHeading)}-qr.png`)}>Download QR <QrCode size={17} /></button>}
+          <button className="button ghost" onClick={() => printProofSheet(business, job, qrUrl)}>Print sales sheet <Printer size={17} /></button>
         </div>
       </div>
       <div className="asset-grid">
@@ -474,6 +482,105 @@ function GeneratedAssets({ business, job }) {
         ))}
       </div>
     </div>
+  );
+}
+
+
+function downloadDataUrl(dataUrl, filename) {
+  const a = document.createElement('a');
+  a.href = dataUrl;
+  a.download = filename;
+  a.click();
+}
+
+function printProofSheet(business, job, qrUrl) {
+  const win = window.open('', '_blank');
+  if (!win) return;
+  win.document.write(`<!doctype html><html><head><title>${job.assets.projectHeading}</title><style>
+    body{font-family:Arial,sans-serif;margin:40px;color:#102033} h1{font-size:38px;line-height:1;margin:0 0 10px} p{font-size:16px;line-height:1.5}.box{border:1px solid #dbe5f2;border-radius:18px;padding:22px;margin-top:20px}.cta{font-size:22px;font-weight:800}.qr{width:180px;height:180px} .brand{color:${business.brandColor};font-weight:900} @media print{button{display:none}}
+  </style></head><body>
+    <div class="brand">${business.name}</div>
+    <h1>${job.assets.projectHeading}</h1>
+    <p>${job.assets.shortSummary}</p>
+    <div class="box"><p class="cta">Need ${safe(job.serviceType, business.primaryService).toLowerCase()}?</p><p>Call ${business.phone} or scan the QR code to see this recent work example and request a quote.</p>${qrUrl ? `<img class="qr" src="${qrUrl}" />` : ''}</div>
+    <button onclick="window.print()">Print</button>
+  </body></html>`);
+  win.document.close();
+}
+
+function FreeTools({ business }) {
+  const [reviewLink, setReviewLink] = useState(business.reviewUrl || '');
+  const [qrUrl, setQrUrl] = useState('');
+  const [review, setReview] = useState('The team was fast, professional, and the driveway looks much better.');
+  const [reply, setReply] = useState('');
+  const [roi, setRoi] = useState({ monthlyPrice: 19, averageJob: 250, extraJobs: 1 });
+  const [toolJob, setToolJob] = useState({ service: business.primaryService || 'Pressure washing', city: business.serviceArea || 'Plano, TX', notes: 'Removed algae and stains from a driveway and front walkway.' });
+  const post = useMemo(() => {
+    const fakeJob = { serviceType: toolJob.service, city: toolJob.city, neighborhood: '', notes: toolJob.notes, customerName: '' };
+    return generateAssets(business, fakeJob).googlePost;
+  }, [business, toolJob]);
+
+  useEffect(() => {
+    if (!reviewLink) return setQrUrl('');
+    QRCode.toDataURL(reviewLink, { margin: 1, width: 220 }).then(setQrUrl).catch(() => setQrUrl(''));
+  }, [reviewLink]);
+
+  function makeReply() {
+    const biz = safe(business.name, 'our team');
+    const hasBad = /bad|terrible|late|awful|poor|dirty|damage|rude|unhappy|disappointed/i.test(review);
+    setReply(hasBad
+      ? `Thank you for the feedback. We’re sorry your experience did not meet expectations. Please contact ${biz} directly so we can understand what happened and work toward a fair resolution.`
+      : `Thank you for sharing your honest feedback. We appreciate you choosing ${biz}, and we’re glad to hear the work made a difference. It was a pleasure helping with your project.`);
+  }
+
+  const monthlyRevenue = (Number(roi.averageJob) || 0) * (Number(roi.extraJobs) || 0);
+  const net = monthlyRevenue - (Number(roi.monthlyPrice) || 0);
+  const multiple = (Number(roi.monthlyPrice) || 0) > 0 ? monthlyRevenue / Number(roi.monthlyPrice) : 0;
+
+  return (
+    <section className="section tools" id="tools">
+      <div className="section-heading">
+        <div className="eyebrow"><Zap size={16} /> Viral/free acquisition layer</div>
+        <h2>Free tools that attract the exact buyer</h2>
+        <p>These utilities can be used as SEO pages and lead magnets: review QR generator, GBP post generator, review reply helper, and ROI calculator.</p>
+      </div>
+      <div className="tools-grid">
+        <div className="tool-card">
+          <h3><QrCode size={20} /> Google review QR generator</h3>
+          <label className="field"><span>Review link</span><input value={reviewLink} onChange={(e) => setReviewLink(e.target.value)} placeholder="Paste Google review link" /></label>
+          {qrUrl ? <img className="tool-qr" src={qrUrl} alt="Review QR" /> : <div className="empty-qr">Paste a link</div>}
+          <div className="mini-actions">
+            <button className="button small secondary" onClick={() => navigator.clipboard.writeText(reviewLink)}><Clipboard size={15} /> Copy link</button>
+            {qrUrl && <button className="button small ghost" onClick={() => downloadDataUrl(qrUrl, 'google-review-qr.png')}><Download size={15} /> Download QR</button>}
+          </div>
+        </div>
+        <div className="tool-card">
+          <h3><MessageSquareText size={20} /> Review reply helper</h3>
+          <label className="field"><span>Customer review</span><textarea rows="4" value={review} onChange={(e) => setReview(e.target.value)} /></label>
+          <button className="button secondary full" onClick={makeReply}>Generate compliant reply</button>
+          {reply && <pre className="tool-output">{reply}</pre>}
+        </div>
+        <div className="tool-card">
+          <h3><LinkIcon size={20} /> GBP post generator</h3>
+          <div className="form-grid two">
+            <Field label="Service" value={toolJob.service} onChange={(v) => setToolJob({ ...toolJob, service: v })} />
+            <Field label="City" value={toolJob.city} onChange={(v) => setToolJob({ ...toolJob, city: v })} />
+          </div>
+          <label className="field"><span>Job notes</span><textarea rows="3" value={toolJob.notes} onChange={(e) => setToolJob({ ...toolJob, notes: e.target.value })} /></label>
+          <pre className="tool-output">{post}</pre>
+          <button className="button small secondary" onClick={() => navigator.clipboard.writeText(post)}><Clipboard size={15} /> Copy post</button>
+        </div>
+        <div className="tool-card">
+          <h3><Calculator size={20} /> ROI calculator</h3>
+          <div className="form-grid two">
+            <Field label="Monthly price" value={roi.monthlyPrice} onChange={(v) => setRoi({ ...roi, monthlyPrice: v })} />
+            <Field label="Average job value" value={roi.averageJob} onChange={(v) => setRoi({ ...roi, averageJob: v })} />
+            <Field label="Extra jobs/month" value={roi.extraJobs} onChange={(v) => setRoi({ ...roi, extraJobs: v })} />
+          </div>
+          <div className="roi-result"><strong>${net.toFixed(0)}</strong><span>estimated monthly net after subscription</span><small>{multiple.toFixed(1)}x gross return before labor/materials if JobProof helps win those jobs.</small></div>
+        </div>
+      </div>
+    </section>
   );
 }
 
