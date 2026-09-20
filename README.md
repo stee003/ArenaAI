@@ -16,6 +16,8 @@ It turns each completed job into:
 - Local analytics counters and CSV exports
 - First-customer outreach scripts and a launch execution center
 - Prospect CRM with scoring, statuses, personalized outreach copy, and CSV export
+- One-click niche demo portfolio generator
+- Launch checklist tracker
 
 The MVP is intentionally built to validate demand fast. It runs fully in the browser with localStorage persistence, so it can be shown to prospects immediately without backend costs.
 
@@ -56,7 +58,7 @@ When validation works, wire the MVP to:
 - PostHog for analytics
 - Vercel for hosting
 
-A production Supabase schema is included at `src/production-schema.sql`. Production API examples are included in `api-examples/`.
+A production Supabase schema is included at `src/production-schema.sql`. Production API examples are included in `api-examples/`. Sales execution is documented in `SALES_PLAYBOOK.md`.
 
 ## Compliance note
 

@@ -55,6 +55,7 @@ const demoState = {
     offer: 'Free driveway and patio estimate',
   },
   leads: [],
+  completedTasks: [],
   prospects: [
     { id: 'prospect-1', businessName: 'Sparkle Path Power Wash', niche: 'Pressure washing', city: 'Frisco, TX', reviewCount: 18, hasPhotos: true, hasProjectPages: false, ownerOperated: true, jobValue: 250, status: 'sample_needed', contact: 'Facebook', notes: 'Good before/after photos, weak captions, no project pages.' },
     { id: 'prospect-2', businessName: 'North Dallas Lawn Crew', niche: 'Landscaping', city: 'Plano, TX', reviewCount: 42, hasPhotos: true, hasProjectPages: false, ownerOperated: true, jobValue: 180, status: 'not_contacted', contact: 'Website form', notes: 'Posts often but not optimized for Google Business Profile.' },
@@ -129,6 +130,66 @@ function generateAssets(business, job) {
   };
 }
 
+
+const NICHE_TEMPLATES = {
+  'Pressure washing': [
+    ['Driveway pressure washing', 'Removed algae, dirt buildup, and tire marks from a concrete driveway and front walkway.'],
+    ['Patio cleaning', 'Cleaned a backyard patio with heavy grime around seating areas and high-traffic spots.'],
+    ['Fence wash', 'Washed a weathered vinyl fence to remove surface dirt and green buildup.'],
+    ['Sidewalk cleaning', 'Cleaned sidewalk panels near the front entrance to improve curb appeal.'],
+    ['House soft wash', 'Soft washed exterior siding where dirt and organic buildup were visible.'],
+  ],
+  'Cleaning': [
+    ['Move-out cleaning', 'Completed a move-out clean focused on kitchen surfaces, bathrooms, floors, and baseboards.'],
+    ['Deep kitchen cleaning', 'Cleaned grease-prone surfaces, cabinet fronts, counters, sink area, and appliance exteriors.'],
+    ['Bathroom deep clean', 'Detailed shower, sink, mirrors, floors, and high-touch areas for a fresher space.'],
+    ['Recurring home cleaning', 'Completed a standard recurring clean covering dusting, vacuuming, mopping, and bathrooms.'],
+    ['Office cleaning', 'Cleaned desks, floors, restroom surfaces, breakroom areas, and high-touch points.'],
+  ],
+  'Landscaping': [
+    ['Lawn cleanup', 'Trimmed overgrowth, cleaned edges, removed debris, and refreshed the front yard.'],
+    ['Mulch installation', 'Installed fresh mulch around planting beds to improve curb appeal and soil coverage.'],
+    ['Hedge trimming', 'Trimmed and shaped hedges around the property for a cleaner look.'],
+    ['Seasonal yard cleanup', 'Removed leaves and debris, cleaned beds, and prepared the yard for the season.'],
+    ['Flower bed refresh', 'Cleared weeds, defined bed edges, and refreshed the planting area.'],
+  ],
+  'Painting': [
+    ['Interior room painting', 'Prepared walls and applied a fresh coat of paint to brighten the room.'],
+    ['Cabinet painting', 'Cleaned, prepped, and painted cabinet surfaces for a refreshed kitchen look.'],
+    ['Exterior trim painting', 'Painted exterior trim areas showing wear from weather exposure.'],
+    ['Fence staining', 'Prepared and stained wood fencing to improve appearance and protection.'],
+    ['Door repainting', 'Repainted an entry door to improve curb appeal.'],
+  ],
+  'Handyman': [
+    ['Drywall repair', 'Patched a damaged drywall area, smoothed the surface, and prepared it for paint.'],
+    ['Fixture installation', 'Installed a replacement fixture and checked fit and finish.'],
+    ['Door repair', 'Adjusted hardware and repaired sticking issues for smoother operation.'],
+    ['Shelving installation', 'Installed wall-mounted shelves and checked alignment and stability.'],
+    ['Caulking refresh', 'Removed worn caulk and applied a fresh bead around key areas.'],
+  ],
+};
+
+function createDemoJobsForNiche(business, niche, city) {
+  const templates = NICHE_TEMPLATES[niche] || NICHE_TEMPLATES['Pressure washing'];
+  return templates.map(([serviceType, notes], index) => {
+    const job = {
+      id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${index}`,
+      createdAt: new Date(Date.now() - index * 86400000).toISOString(),
+      serviceType,
+      city: safe(city, business.serviceArea),
+      neighborhood: ['Northside', 'Downtown', 'West End', 'Oak Park', 'Riverside'][index] || '',
+      customerName: '',
+      notes,
+      images: [],
+      views: Math.floor(5 + Math.random() * 30),
+      reviewClicks: Math.floor(Math.random() * 7),
+      quoteClicks: Math.floor(Math.random() * 4),
+    };
+    job.assets = generateAssets({ ...business, primaryService: niche, serviceArea: safe(city, business.serviceArea) }, job);
+    return job;
+  });
+}
+
 function loadState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -139,6 +200,7 @@ function loadState() {
       jobs: Array.isArray(parsed.jobs) && parsed.jobs.length ? parsed.jobs : demoState.jobs,
       leads: Array.isArray(parsed.leads) ? parsed.leads : [],
       prospects: Array.isArray(parsed.prospects) ? parsed.prospects : demoState.prospects,
+      completedTasks: Array.isArray(parsed.completedTasks) ? parsed.completedTasks : [],
     };
   } catch {
     return demoState;
@@ -225,12 +287,14 @@ function App() {
       <Hero />
       <ProofStrip />
       <Builder state={state} setState={setState} />
+      <DemoFactory state={state} setState={setState} />
       <Dashboard state={state} setState={setState} />
       <FreeTools business={state.business} />
       <Pricing />
       <AcquisitionKit business={state.business} />
       <ProspectCRM state={state} setState={setState} />
       <CampaignCenter state={state} />
+      <LaunchChecklist state={state} setState={setState} />
       <Roadmap />
       <Footer />
     </div>
@@ -485,6 +549,42 @@ function GeneratedAssets({ business, job }) {
   );
 }
 
+
+
+function DemoFactory({ state, setState }) {
+  const [niche, setNiche] = useState(state.business.primaryService || 'Pressure washing');
+  const [city, setCity] = useState(state.business.serviceArea || 'Plano, TX');
+  const [made, setMade] = useState(false);
+
+  function generateDemoSet() {
+    const jobs = createDemoJobsForNiche(state.business, niche, city);
+    setState((prev) => ({
+      ...prev,
+      business: { ...prev.business, primaryService: niche, serviceArea: city },
+      jobs: [...jobs, ...prev.jobs],
+    }));
+    setMade(true);
+    setTimeout(() => document.getElementById('dashboard')?.scrollIntoView({ behavior: 'smooth' }), 150);
+  }
+
+  return (
+    <section className="section demo-factory" id="demo-factory">
+      <div className="demo-factory-card">
+        <div>
+          <div className="eyebrow"><Sparkles size={16} /> Demo accelerator</div>
+          <h2>Create a 5-page niche demo in one click</h2>
+          <p>Use this to make sales samples before you have customer photos. Then replace demo pages with real customer jobs as soon as a prospect replies.</p>
+        </div>
+        <div className="demo-controls">
+          <label className="field"><span>Niche</span><select value={niche} onChange={(e) => setNiche(e.target.value)}>{Object.keys(NICHE_TEMPLATES).map((item) => <option key={item}>{item}</option>)}</select></label>
+          <Field label="City / service area" value={city} onChange={setCity} />
+          <button className="button primary" onClick={generateDemoSet}>Generate demo portfolio <ArrowRight size={17} /></button>
+          {made && <span className="success-pill"><Check size={15} /> Demo pages added</span>}
+        </div>
+      </div>
+    </section>
+  );
+}
 
 function downloadDataUrl(dataUrl, filename) {
   const a = document.createElement('a');
@@ -958,6 +1058,55 @@ function AcquisitionKit({ business }) {
           <p><strong>{business.name}</strong></p>
           <p>{business.primaryService} in {business.serviceArea}</p>
           <p className="muted">Use this demo as your first sales sample, then replace it with each prospect’s niche and city.</p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+
+const LAUNCH_TASKS = [
+  ['niche', 'Pick one niche and one city'],
+  ['stripe', 'Create $49 beta setup and $19/month Stripe payment links'],
+  ['samples', 'Create 5 sample JobProof pages'],
+  ['prospects50', 'Add 50 prospects to the CRM'],
+  ['dm25', 'Send 25 personalized messages'],
+  ['followups', 'Send 48-hour follow-ups'],
+  ['interviews', 'Book 3 customer discovery calls'],
+  ['firstsale', 'Close first $49 setup sale'],
+  ['testimonial', 'Collect first testimonial or objection'],
+  ['iterate', 'Improve the offer based on real replies'],
+];
+
+function LaunchChecklist({ state, setState }) {
+  const done = state.completedTasks || [];
+  const pct = Math.round((done.length / LAUNCH_TASKS.length) * 100);
+  function toggle(id) {
+    setState((prev) => {
+      const current = prev.completedTasks || [];
+      return { ...prev, completedTasks: current.includes(id) ? current.filter((item) => item !== id) : [...current, id] };
+    });
+  }
+  return (
+    <section className="section launch-checklist" id="launch-checklist">
+      <div className="section-heading left">
+        <div className="eyebrow"><Rocket size={16} /> Do not stop at strategy</div>
+        <h2>Launch checklist tracker</h2>
+        <p>Use this as the daily operating system. The product only matters if it reaches business owners and asks for payment.</p>
+      </div>
+      <div className="checklist-shell">
+        <div className="progress-card">
+          <strong>{pct}%</strong>
+          <span>launch progress</span>
+          <div className="progress-bar"><i style={{ width: `${pct}%` }} /></div>
+        </div>
+        <div className="task-grid">
+          {LAUNCH_TASKS.map(([id, label]) => (
+            <button className={`task-item ${done.includes(id) ? 'done' : ''}`} key={id} onClick={() => toggle(id)}>
+              <span>{done.includes(id) ? <Check size={16} /> : ''}</span>
+              {label}
+            </button>
+          ))}
         </div>
       </div>
     </section>
