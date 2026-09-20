@@ -36,6 +36,9 @@ import {
   MessageSquareText,
   Link as LinkIcon,
   Printer,
+  Settings,
+  RotateCcw,
+  Upload,
 } from 'lucide-react';
 import './styles.css';
 
@@ -56,6 +59,12 @@ const demoState = {
   },
   leads: [],
   completedTasks: [],
+  settings: {
+    betaPaymentLink: '',
+    starterPaymentLink: '',
+    proPaymentLink: '',
+    leadEmail: 'owner@example.com',
+  },
   prospects: [
     { id: 'prospect-1', businessName: 'Sparkle Path Power Wash', niche: 'Pressure washing', city: 'Frisco, TX', reviewCount: 18, hasPhotos: true, hasProjectPages: false, ownerOperated: true, jobValue: 250, status: 'sample_needed', contact: 'Facebook', notes: 'Good before/after photos, weak captions, no project pages.' },
     { id: 'prospect-2', businessName: 'North Dallas Lawn Crew', niche: 'Landscaping', city: 'Plano, TX', reviewCount: 42, hasPhotos: true, hasProjectPages: false, ownerOperated: true, jobValue: 180, status: 'not_contacted', contact: 'Website form', notes: 'Posts often but not optimized for Google Business Profile.' },
@@ -201,6 +210,7 @@ function loadState() {
       leads: Array.isArray(parsed.leads) ? parsed.leads : [],
       prospects: Array.isArray(parsed.prospects) ? parsed.prospects : demoState.prospects,
       completedTasks: Array.isArray(parsed.completedTasks) ? parsed.completedTasks : [],
+      settings: { ...demoState.settings, ...(parsed.settings || {}) },
     };
   } catch {
     return demoState;
@@ -290,7 +300,8 @@ function App() {
       <DemoFactory state={state} setState={setState} />
       <Dashboard state={state} setState={setState} />
       <FreeTools business={state.business} />
-      <Pricing />
+      <Pricing settings={state.settings} />
+      <MonetizationSetup state={state} setState={setState} />
       <AcquisitionKit business={state.business} />
       <ProspectCRM state={state} setState={setState} />
       <CampaignCenter state={state} />
@@ -313,6 +324,7 @@ function Nav() {
         <a href="#dashboard">Dashboard</a>
         <a href="#tools">Free Tools</a>
         <a href="#pricing">Pricing</a>
+        <a href="#settings">Payments</a>
         <a href="#growth">Growth Kit</a>
         <a href="#prospects">Prospects</a>
         <a href="#portfolio">Portfolio</a>
@@ -989,11 +1001,11 @@ function PortfolioPage({ state, onHome }) {
   );
 }
 
-function Pricing() {
+function Pricing({ settings = {} }) {
   const plans = [
-    { name: 'Free', price: '$0', desc: 'Validate with two job proofs.', features: ['2 job stories', 'Watermarked pages', 'Review request copy', 'Social caption'] },
-    { name: 'Starter', price: '$19/mo', desc: 'For solo operators building review momentum.', features: ['20 job stories/month', 'QR codes', 'GBP posts', 'Portfolio page', 'No watermark'], featured: true },
-    { name: 'Pro', price: '$39/mo', desc: 'For crews that want repeatable local marketing.', features: ['Unlimited job stories', 'Custom branding', 'Review replies', 'Lead capture', 'Analytics exports'] },
+    { name: 'Free', price: '$0', desc: 'Validate with two job proofs.', features: ['2 job stories', 'Watermarked pages', 'Review request copy', 'Social caption'], href: '#builder' },
+    { name: 'Starter', price: '$19/mo', desc: 'For solo operators building review momentum.', features: ['20 job stories/month', 'QR codes', 'GBP posts', 'Portfolio page', 'No watermark'], featured: true, href: settings.starterPaymentLink || '#builder' },
+    { name: 'Pro', price: '$39/mo', desc: 'For crews that want repeatable local marketing.', features: ['Unlimited job stories', 'Custom branding', 'Review replies', 'Lead capture', 'Analytics exports'], href: settings.proPaymentLink || '#builder' },
   ];
   return (
     <section className="section pricing" id="pricing">
@@ -1009,9 +1021,83 @@ function Pricing() {
             <strong>{plan.price}</strong>
             <p>{plan.desc}</p>
             <ul>{plan.features.map((f) => <li key={f}><Check size={16} /> {f}</li>)}</ul>
-            <a className={plan.featured ? 'button primary full' : 'button secondary full'} href="#builder">Start now</a>
+            <a className={plan.featured ? 'button primary full' : 'button secondary full'} href={plan.href}>Start now</a>
           </div>
         ))}
+      </div>
+    </section>
+  );
+}
+
+
+function MonetizationSetup({ state, setState }) {
+  const fileRef = useRef(null);
+  const settings = state.settings || {};
+  const betaClose = `Here is the beta setup link: ${settings.betaPaymentLink || '[paste Stripe $49 payment link here]'}\n\nAfter payment, send me 2-5 photos per job, the service type, city/neighborhood, and one sentence about what was done. I’ll turn the first 5 jobs into proof pages, QR codes, Google posts, review request messages, and social captions.`;
+
+  function update(field, value) {
+    setState((prev) => ({ ...prev, settings: { ...(prev.settings || {}), [field]: value } }));
+  }
+
+  function exportBackup() {
+    const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `${slugify(state.business.name)}-jobproof-backup.json`;
+    a.click();
+  }
+
+  function importBackup(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const parsed = JSON.parse(reader.result);
+        if (parsed.business && Array.isArray(parsed.jobs)) setState({ ...demoState, ...parsed });
+      } catch {
+        alert('Could not import backup JSON.');
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  function resetDemo() {
+    if (!confirm('Reset local demo data? This only affects this browser.')) return;
+    localStorage.removeItem(STORAGE_KEY);
+    setState(demoState);
+  }
+
+  return (
+    <section className="section monetization" id="settings">
+      <div className="section-heading left">
+        <div className="eyebrow"><CreditCard size={16} /> Monetization setup</div>
+        <h2>Payment links, close copy, and data backup</h2>
+        <p>Add Stripe payment links when you create them. The pricing buttons and close scripts can then point directly to checkout.</p>
+      </div>
+      <div className="monetization-grid">
+        <div className="panel">
+          <h3><Settings size={20} /> Payment settings</h3>
+          <Field label="$49 beta setup payment link" value={settings.betaPaymentLink || ''} onChange={(v) => update('betaPaymentLink', v)} />
+          <Field label="$19/month Starter payment link" value={settings.starterPaymentLink || ''} onChange={(v) => update('starterPaymentLink', v)} />
+          <Field label="$39/month Pro payment link" value={settings.proPaymentLink || ''} onChange={(v) => update('proPaymentLink', v)} />
+          <Field label="Lead notification email" value={settings.leadEmail || ''} onChange={(v) => update('leadEmail', v)} />
+        </div>
+        <div className="panel">
+          <h3><Clipboard size={20} /> Payment close message</h3>
+          <pre className="script-box">{betaClose}</pre>
+          <button className="button secondary" onClick={() => navigator.clipboard.writeText(betaClose)}><Clipboard size={16} /> Copy close message</button>
+        </div>
+        <div className="panel">
+          <h3><Database size={20} /> MVP data backup</h3>
+          <p className="muted">Because this validation MVP stores data in the browser, export backups before switching devices or clearing browser storage.</p>
+          <div className="backup-actions">
+            <button className="button secondary" onClick={exportBackup}><Download size={16} /> Export backup</button>
+            <button className="button ghost" onClick={() => fileRef.current?.click()}><Upload size={16} /> Import backup</button>
+            <button className="button ghost" onClick={resetDemo}><RotateCcw size={16} /> Reset demo</button>
+          </div>
+          <input ref={fileRef} type="file" accept="application/json" onChange={importBackup} hidden />
+        </div>
       </div>
     </section>
   );

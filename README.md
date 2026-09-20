@@ -18,6 +18,9 @@ It turns each completed job into:
 - Prospect CRM with scoring, statuses, personalized outreach copy, and CSV export
 - One-click niche demo portfolio generator
 - Launch checklist tracker
+- Payment-link setup panel
+- Backup/import/export for local MVP data
+- PWA manifest and icon
 
 The MVP is intentionally built to validate demand fast. It runs fully in the browser with localStorage persistence, so it can be shown to prospects immediately without backend costs.
 

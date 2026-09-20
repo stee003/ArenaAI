@@ -295,3 +295,11 @@ button { cursor: pointer; }
 @media (max-width: 640px) {
   .task-grid { grid-template-columns: 1fr; }
 }
+
+.monetization-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; align-items: stretch; }
+.backup-actions { display: flex; gap: .65rem; flex-wrap: wrap; margin-top: 1rem; }
+.monetization .script-box { margin-bottom: 1rem; }
+
+@media (max-width: 1100px) {
+  .monetization-grid { grid-template-columns: 1fr; }
+}
